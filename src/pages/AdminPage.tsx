@@ -9,6 +9,7 @@ const PATH_TO_TAB: Record<string, AdminTab> = {
   '/categories': 'categories',
   '/calendar': 'calendar',
   '/comments': 'comments',
+  '/newsletter': 'newsletter',
 };
 
 export default function AdminPage() {

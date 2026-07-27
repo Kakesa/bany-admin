@@ -22,6 +22,7 @@ import {
   LayoutGrid,
   MessageCircle,
   ExternalLink,
+  Mail,
 } from 'lucide-react';
 import type { BlogArticle, BlogArticleStatus, BlogCategory, BlogComment } from '../types';
 import {
@@ -43,14 +44,13 @@ import { useAuth } from '../context/AuthContext';
 import DateTimePicker from './DateTimePicker';
 import ActionsMenu from './ActionsMenu';
 import RichTextEditor from './RichTextEditor';
+import NewsletterAdminPanel from './NewsletterAdminPanel';
 
-export type AdminTab = 'dashboard' | 'articles' | 'categories' | 'calendar' | 'comments';
+export type AdminTab = 'dashboard' | 'articles' | 'categories' | 'calendar' | 'comments' | 'newsletter';
 
 interface BlogAdminProps {
   initialTab?: AdminTab;
 }
-
-const PUBLIC_SITE = import.meta.env.VITE_PUBLIC_SITE_URL || 'http://localhost:3000';
 
 const TAB_PATH: Record<AdminTab, string> = {
   dashboard: '/dashboard',
@@ -58,7 +58,10 @@ const TAB_PATH: Record<AdminTab, string> = {
   categories: '/categories',
   calendar: '/calendar',
   comments: '/comments',
+  newsletter: '/newsletter',
 };
+
+const PUBLIC_SITE = import.meta.env.VITE_PUBLIC_SITE_URL || 'http://localhost:3000';
 
 type FormState = {
   title: string;
@@ -488,6 +491,7 @@ export default function BlogAdmin({ initialTab = 'dashboard' }: BlogAdminProps) 
     { id: 'articles', label: 'Articles', icon: FileText },
     { id: 'categories', label: 'Catégories', icon: Tags },
     { id: 'comments', label: 'Commentaires', icon: MessageCircle },
+    { id: 'newsletter', label: 'Newsletter', icon: Mail },
     { id: 'calendar', label: 'Calendrier', icon: CalendarDays },
   ];
 
@@ -1080,6 +1084,11 @@ export default function BlogAdmin({ initialTab = 'dashboard' }: BlogAdminProps) 
                   )}
                 </div>
               </div>
+            )}
+
+            {/* NEWSLETTER */}
+            {tab === 'newsletter' && token && (
+              <NewsletterAdminPanel token={token} onMessage={setMessage} />
             )}
 
             {/* CALENDAR */}

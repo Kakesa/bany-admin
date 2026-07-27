@@ -54,3 +54,18 @@ export interface BlogComment {
   articleTitle?: string;
   articleSlug?: string;
 }
+
+export interface NewsletterSubscriber {
+  id: string;
+  email: string;
+  source: string;
+  active: boolean;
+  subscribedAt: string;
+  lastNotifiedAt?: string | null;
+}
+
+export interface NewsletterStats {
+  total: number;
+  active: number;
+  inactive: number;
+}
