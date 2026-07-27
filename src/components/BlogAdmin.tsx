@@ -491,7 +491,7 @@ export default function BlogAdmin({ initialTab = 'dashboard' }: BlogAdminProps) 
     { id: 'articles', label: 'Articles', icon: FileText },
     { id: 'categories', label: 'Catégories', icon: Tags },
     { id: 'comments', label: 'Commentaires', icon: MessageCircle },
-    { id: 'newsletter', label: 'Newsletter', icon: Mail },
+    { id: 'newsletter', label: 'Bany Mail', icon: Mail },
     { id: 'calendar', label: 'Calendrier', icon: CalendarDays },
   ];
 

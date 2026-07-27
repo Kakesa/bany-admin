@@ -58,14 +58,77 @@ export interface BlogComment {
 export interface NewsletterSubscriber {
   id: string;
   email: string;
+  firstName?: string;
+  lastName?: string;
   source: string;
+  tags?: string[];
   active: boolean;
   subscribedAt: string;
+  consentAt?: string | null;
   lastNotifiedAt?: string | null;
+  welcomeSentAt?: string | null;
 }
 
 export interface NewsletterStats {
   total: number;
   active: number;
   inactive: number;
+}
+
+export type EmailTemplateCategory = 'welcome' | 'article' | 'announcement' | 'custom';
+
+export interface EmailTemplate {
+  id: string;
+  name: string;
+  slug: string;
+  category: EmailTemplateCategory | string;
+  subject: string;
+  previewText?: string;
+  htmlBody: string;
+  textBody?: string;
+  isSystem?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export type EmailCampaignStatus = 'draft' | 'scheduled' | 'sending' | 'sent' | 'cancelled' | 'failed';
+
+export interface EmailCampaign {
+  id: string;
+  name: string;
+  subject: string;
+  previewText?: string;
+  htmlContent: string;
+  textContent?: string;
+  status: EmailCampaignStatus | string;
+  templateId?: string | null;
+  scheduledAt?: string | null;
+  sentAt?: string | null;
+  segment?: {
+    sources?: string[];
+    tags?: string[];
+    activeOnly?: boolean;
+  };
+  stats?: {
+    recipients: number;
+    sent: number;
+    failed: number;
+  };
+  createdBy?: string;
+  errorMessage?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface EmailMarketingOverview {
+  audience: NewsletterStats;
+  templates: number;
+  recentCampaigns: Array<{
+    id: string;
+    name: string;
+    subject: string;
+    status: string;
+    sentAt?: string | null;
+    stats?: EmailCampaign['stats'];
+  }>;
 }
