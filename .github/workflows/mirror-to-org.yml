@@ -1,0 +1,26 @@
+name: Mirror to Yolo-Consultancy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  mirror:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Push to organization repo
+        env:
+          ORG_SYNC_TOKEN: ${{ secrets.ORG_SYNC_TOKEN }}
+        run: |
+          if [ -z "$ORG_SYNC_TOKEN" ]; then
+            echo "Missing secret ORG_SYNC_TOKEN — add a PAT with write access to Yolo-Consultancy/bany-admin"
+            exit 1
+          fi
+          git remote add org "https://x-access-token:${ORG_SYNC_TOKEN}@github.com/Yolo-Consultancy/bany-admin.git"
+          git push org "HEAD:main"
