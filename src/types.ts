@@ -25,6 +25,7 @@ export interface BlogArticle {
   gallery: string[];
   youtubeUrl?: string;
   author: string;
+  authorTitle?: string;
   categoryId: string;
   category?: BlogCategory | null;
   tags: string[];

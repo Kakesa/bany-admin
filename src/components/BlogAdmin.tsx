@@ -75,6 +75,7 @@ type FormState = {
   gallery: string[];
   youtubeUrl: string;
   author: string;
+  authorTitle: string;
   categoryId: string;
   tags: string;
   status: BlogArticleStatus;
@@ -102,6 +103,7 @@ const emptyForm = (categories: BlogCategory[]): FormState => ({
   gallery: [],
   youtubeUrl: '',
   author: 'Bany',
+  authorTitle: 'Founder & CEO – Yolo Group | Honorary Doctor (Entrepreneurship & Host of Bany Talks)',
   categoryId: categories[0]?.id || '',
   tags: '',
   status: 'draft',
@@ -119,6 +121,9 @@ function articleToForm(article: BlogArticle): FormState {
     gallery: article.gallery || [],
     youtubeUrl: article.youtubeUrl || '',
     author: article.author,
+    authorTitle:
+      article.authorTitle ||
+      'Founder & CEO – Yolo Group | Honorary Doctor (Entrepreneurship & Host of Bany Talks)',
     categoryId: article.categoryId,
     tags: (article.tags || []).join(', '),
     status: article.status,
@@ -314,6 +319,7 @@ export default function BlogAdmin({ initialTab = 'dashboard' }: BlogAdminProps) 
       gallery: form.gallery,
       youtubeUrl: form.youtubeUrl || undefined,
       author: form.author,
+      authorTitle: form.authorTitle,
       categoryId: form.categoryId,
       tags: form.tags
         .split(',')
@@ -1242,6 +1248,16 @@ export default function BlogAdmin({ initialTab = 'dashboard' }: BlogAdminProps) 
                     value={form.author}
                     onChange={(e) => setForm({ ...form, author: e.target.value })}
                     className="w-full bg-transparent border-b border-white/10 py-2 text-stone-100 focus:outline-none focus:border-rose-500/50"
+                  />
+                </label>
+
+                <label className="space-y-2 block lg:col-span-2">
+                  <span className="text-xs text-stone-500 uppercase tracking-wider">Titre / fonction</span>
+                  <input
+                    value={form.authorTitle}
+                    onChange={(e) => setForm({ ...form, authorTitle: e.target.value })}
+                    placeholder="Founder & CEO – Yolo Group | …"
+                    className="w-full bg-transparent border-b border-white/10 py-2 text-stone-100 focus:outline-none focus:border-rose-500/50 text-sm"
                   />
                 </label>
 
