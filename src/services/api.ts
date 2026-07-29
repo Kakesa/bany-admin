@@ -137,6 +137,33 @@ export async function uploadImage(token: string, file: File): Promise<string> {
   return mediaUrl(data.url);
 }
 
+export type SiteStatistic = {
+  label: string;
+  value: string;
+};
+
+export type SiteContent = {
+  id: string;
+  key: string;
+  statistics: SiteStatistic[];
+  updatedAt?: string;
+};
+
+export async function fetchSiteContent(): Promise<SiteContent> {
+  return request<SiteContent>('/api/site-content');
+}
+
+export async function updateSiteContent(
+  token: string,
+  payload: { statistics: SiteStatistic[] }
+): Promise<SiteContent> {
+  return request('/api/site-content', {
+    method: 'PUT',
+    headers: { Authorization: `Bearer ${token}` },
+    body: JSON.stringify(payload),
+  });
+}
+
 export function formatBlogDate(iso: string | null | undefined): string {
   if (!iso) return '';
   return new Date(iso).toLocaleDateString('fr-FR', {

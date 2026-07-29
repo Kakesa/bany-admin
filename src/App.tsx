@@ -17,6 +17,7 @@ export default function App() {
           <Route path="/calendar" element={<AdminPage />} />
           <Route path="/comments" element={<AdminPage />} />
           <Route path="/newsletter" element={<AdminPage />} />
+          <Route path="/site-content" element={<AdminPage />} />
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>
       </BrowserRouter>
