@@ -501,7 +501,7 @@ export default function BlogAdmin({ initialTab = 'dashboard' }: BlogAdminProps) 
     { id: 'categories', label: 'Catégories', icon: Tags },
     { id: 'comments', label: 'Commentaires', icon: MessageCircle },
     { id: 'newsletter', label: 'Bany Mail', icon: Mail },
-    { id: 'site-content', label: 'Chiffres clés', icon: BarChart3 },
+    { id: 'site-content', label: 'Contenu site', icon: BarChart3 },
     { id: 'calendar', label: 'Calendrier', icon: CalendarDays },
   ];
 

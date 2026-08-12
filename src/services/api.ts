@@ -142,10 +142,18 @@ export type SiteStatistic = {
   value: string;
 };
 
+export type TimelineMilestone = {
+  year: string;
+  month: number | null;
+  title: string;
+  desc: string;
+};
+
 export type SiteContent = {
   id: string;
   key: string;
   statistics: SiteStatistic[];
+  timeline?: TimelineMilestone[];
   updatedAt?: string;
 };
 
@@ -155,7 +163,7 @@ export async function fetchSiteContent(): Promise<SiteContent> {
 
 export async function updateSiteContent(
   token: string,
-  payload: { statistics: SiteStatistic[] }
+  payload: { statistics?: SiteStatistic[]; timeline?: TimelineMilestone[] }
 ): Promise<SiteContent> {
   return request('/api/site-content', {
     method: 'PUT',
