@@ -1238,7 +1238,15 @@ export default function BlogAdmin({ initialTab = 'dashboard' }: BlogAdminProps) 
                     key={editingId || 'new'}
                     value={form.content}
                     onChange={(content) => setForm({ ...form, content })}
-                    placeholder="Écrivez votre article… gras, italique, titres, listes…"
+                    placeholder="Écrivez votre article… gras, italique, titres, listes, images…"
+                    onUploadImage={async (file) => {
+                      try {
+                        return await uploadImage(token, file);
+                      } catch (err) {
+                        setMessage(err instanceof Error ? err.message : 'Upload image échoué');
+                        throw err;
+                      }
+                    }}
                   />
                 </div>
 

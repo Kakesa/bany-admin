@@ -1,10 +1,11 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Underline from '@tiptap/extension-underline';
 import Link from '@tiptap/extension-link';
 import Placeholder from '@tiptap/extension-placeholder';
 import TextAlign from '@tiptap/extension-text-align';
+import Image from '@tiptap/extension-image';
 import {
   Bold,
   Italic,
@@ -21,12 +22,15 @@ import {
   Undo,
   Redo,
   Pilcrow,
+  ImagePlus,
 } from 'lucide-react';
 
 interface RichTextEditorProps {
   value: string;
   onChange: (html: string) => void;
   placeholder?: string;
+  /** Upload un fichier et retourne l’URL publique de l’image */
+  onUploadImage?: (file: File) => Promise<string>;
 }
 
 function ToolbarButton({
@@ -62,7 +66,11 @@ export default function RichTextEditor({
   value,
   onChange,
   placeholder = 'Écrivez votre article…',
+  onUploadImage,
 }: RichTextEditorProps) {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [uploadingImage, setUploadingImage] = useState(false);
+
   const editor = useEditor({
     immediatelyRender: false,
     extensions: [
@@ -78,12 +86,76 @@ export default function RichTextEditor({
       TextAlign.configure({
         types: ['heading', 'paragraph'],
       }),
+      Image.configure({
+        allowBase64: false,
+        HTMLAttributes: {
+          class: 'editor-inline-image',
+        },
+      }),
     ],
     content: value || '',
     editorProps: {
       attributes: {
         class:
-          'tiptap prose-blog min-h-[220px] max-h-[420px] overflow-y-auto px-4 py-3 focus:outline-none text-stone-200 text-sm leading-relaxed [&_h1]:text-2xl [&_h1]:font-display [&_h1]:text-stone-100 [&_h1]:mb-3 [&_h2]:text-xl [&_h2]:font-display [&_h2]:text-stone-100 [&_h2]:mb-2 [&_h3]:text-lg [&_h3]:font-display [&_h3]:text-stone-100 [&_h3]:mb-2 [&_p]:mb-3 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_li]:mb-1 [&_a]:text-rose-400',
+          'tiptap prose-blog min-h-[220px] max-h-[420px] overflow-y-auto px-4 py-3 focus:outline-none text-stone-200 text-sm leading-relaxed [&_h1]:text-2xl [&_h1]:font-display [&_h1]:text-stone-100 [&_h1]:mb-3 [&_h2]:text-xl [&_h2]:font-display [&_h2]:text-stone-100 [&_h2]:mb-2 [&_h3]:text-lg [&_h3]:font-display [&_h3]:text-stone-100 [&_h3]:mb-2 [&_p]:mb-3 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_li]:mb-1 [&_a]:text-rose-400 [&_img]:max-w-full [&_img]:h-auto [&_img]:my-4 [&_img]:border [&_img]:border-white/10',
+      },
+      handleDrop: (view, event) => {
+        if (!onUploadImage) return false;
+        const files = event.dataTransfer?.files;
+        if (!files?.length) return false;
+        const imageFiles = Array.from(files).filter((f) => f.type.startsWith('image/'));
+        if (!imageFiles.length) return false;
+        event.preventDefault();
+        void (async () => {
+          setUploadingImage(true);
+          try {
+            for (const file of imageFiles) {
+              const url = await onUploadImage(file);
+              const { schema } = view.state;
+              const node = schema.nodes.image.create({ src: url, alt: file.name });
+              const pos = view.posAtCoords({ left: event.clientX, top: event.clientY })?.pos;
+              const tr = view.state.tr;
+              if (typeof pos === 'number') {
+                tr.insert(pos, node);
+              } else {
+                tr.replaceSelectionWith(node);
+              }
+              view.dispatch(tr);
+            }
+          } catch {
+            /* parent montre l’erreur via onUploadImage */
+          } finally {
+            setUploadingImage(false);
+          }
+        })();
+        return true;
+      },
+      handlePaste: (view, event) => {
+        if (!onUploadImage) return false;
+        const items = event.clipboardData?.items;
+        if (!items) return false;
+        const imageItems = Array.from(items).filter((i) => i.type.startsWith('image/'));
+        if (!imageItems.length) return false;
+        event.preventDefault();
+        void (async () => {
+          setUploadingImage(true);
+          try {
+            for (const item of imageItems) {
+              const file = item.getAsFile();
+              if (!file) continue;
+              const url = await onUploadImage(file);
+              const { schema } = view.state;
+              const node = schema.nodes.image.create({ src: url, alt: file.name });
+              const tr = view.state.tr.replaceSelectionWith(node);
+              view.dispatch(tr);
+            }
+          } catch {
+            /* ignore */
+          } finally {
+            setUploadingImage(false);
+          }
+        })();
+        return true;
       },
     },
     onUpdate: ({ editor: ed }) => {
@@ -113,6 +185,34 @@ export default function RichTextEditor({
       return;
     }
     editor.chain().focus().extendMarkRange('link').setLink({ href: url }).run();
+  };
+
+  const insertImageFromUrl = () => {
+    const url = window.prompt('URL de l’image', 'https://');
+    if (!url?.trim()) return;
+    editor.chain().focus().setImage({ src: url.trim() }).run();
+  };
+
+  const openImagePicker = () => {
+    if (onUploadImage) {
+      fileInputRef.current?.click();
+      return;
+    }
+    insertImageFromUrl();
+  };
+
+  const handleImageFile = async (file: File | undefined) => {
+    if (!file || !onUploadImage) return;
+    setUploadingImage(true);
+    try {
+      const url = await onUploadImage(file);
+      editor.chain().focus().setImage({ src: url, alt: file.name }).run();
+    } catch {
+      /* parent */
+    } finally {
+      setUploadingImage(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
   };
 
   return (
@@ -218,6 +318,22 @@ export default function RichTextEditor({
           <LinkIcon className="w-3.5 h-3.5" />
         </ToolbarButton>
 
+        <ToolbarButton
+          title={uploadingImage ? 'Upload…' : 'Insérer une image'}
+          disabled={uploadingImage}
+          active={editor.isActive('image')}
+          onClick={openImagePicker}
+        >
+          <ImagePlus className="w-3.5 h-3.5" />
+        </ToolbarButton>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={(e) => handleImageFile(e.target.files?.[0])}
+        />
+
         <span className="w-px h-4 bg-white/10 mx-1" />
 
         <ToolbarButton
@@ -236,6 +352,12 @@ export default function RichTextEditor({
         </ToolbarButton>
       </div>
 
+      {uploadingImage && (
+        <p className="px-4 py-1.5 text-[11px] text-stone-500 font-body border-b border-white/5">
+          Téléversement de l’image…
+        </p>
+      )}
+
       <EditorContent editor={editor} />
 
       <style>{`
@@ -248,6 +370,17 @@ export default function RichTextEditor({
         }
         .tiptap:focus {
           outline: none;
+        }
+        .tiptap img.editor-inline-image,
+        .tiptap img {
+          max-width: 100%;
+          height: auto;
+          display: block;
+          margin: 1rem 0;
+          border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .tiptap img.ProseMirror-selectednode {
+          outline: 2px solid #f43f5e;
         }
       `}</style>
     </div>
