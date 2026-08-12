@@ -617,7 +617,13 @@ export default function BlogAdmin({ initialTab = 'dashboard' }: BlogAdminProps) 
 
           <div className="flex-1 pt-10 sm:pt-12 lg:pt-14 px-4 sm:px-6 lg:px-8 pb-10 space-y-8 bg-stone-950">
             {message && (
-              <div className="text-sm text-rose-400 font-body border border-rose-500/20 bg-rose-500/5 px-4 py-3">
+              <div
+                className={`text-sm font-body border px-4 py-3 ${
+                  /erreur|impossible|échou|requis|obligatoire|échec/i.test(message)
+                    ? 'text-rose-400 border-rose-500/20 bg-rose-500/5'
+                    : 'text-emerald-400 border-emerald-500/20 bg-emerald-500/5'
+                }`}
+              >
                 {message}
               </div>
             )}

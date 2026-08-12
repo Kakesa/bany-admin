@@ -34,7 +34,9 @@ const MONTHS = [
 const emptyStat = (): SiteStatistic => ({ label: '', value: '' });
 const emptyMilestone = (): TimelineMilestone => ({
   year: String(new Date().getFullYear()),
-  month: null,
+  month: 1,
+  endYear: String(new Date().getFullYear()),
+  endMonth: 4,
   title: '',
   desc: '',
 });
@@ -43,8 +45,8 @@ function sortTimelineLocal(items: TimelineMilestone[]) {
   return [...items].sort((a, b) => {
     const yearA = Number.parseInt(a.year, 10) || 0;
     const yearB = Number.parseInt(b.year, 10) || 0;
-    if (yearA !== yearB) return yearA - yearB;
-    return (a.month ?? 0) - (b.month ?? 0);
+    if (yearA !== yearB) return yearB - yearA;
+    return (b.month ?? 0) - (a.month ?? 0);
   });
 }
 
@@ -61,6 +63,8 @@ export default function SiteContentPanel({ token, onMessage }: Props) {
   const [addModal, setAddModal] = useState<AddModal>(null);
   const [draftStat, setDraftStat] = useState<SiteStatistic>(emptyStat);
   const [draftMilestone, setDraftMilestone] = useState<TimelineMilestone>(emptyMilestone);
+  const [localSuccess, setLocalSuccess] = useState<string | null>(null);
+  const [adding, setAdding] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -86,6 +90,12 @@ export default function SiteContentPanel({ token, onMessage }: Props) {
   }, [onMessage]);
 
   useEffect(() => {
+    if (!localSuccess) return;
+    const t = window.setTimeout(() => setLocalSuccess(null), 4000);
+    return () => window.clearTimeout(t);
+  }, [localSuccess]);
+
+  useEffect(() => {
     if (!addModal) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') closeAddModal();
@@ -104,21 +114,35 @@ export default function SiteContentPanel({ token, onMessage }: Props) {
     setAddModal('timeline');
   };
 
-  const closeAddModal = () => setAddModal(null);
+  const closeAddModal = () => {
+    if (adding) return;
+    setAddModal(null);
+  };
 
-  const confirmAddStatistics = () => {
+  const confirmAddStatistics = async () => {
     const label = draftStat.label.trim();
     const value = draftStat.value.trim();
     if (!label || !value) {
       onMessage('Valeur et libellé sont requis');
       return;
     }
-    setStatistics((prev) => [...prev, { label, value }]);
-    closeAddModal();
+    setAdding(true);
     onMessage(null);
+    try {
+      const next = [...statistics, { label, value }];
+      const data = await updateSiteContent(token, { statistics: next });
+      setStatistics(data.statistics || next);
+      setLocalSuccess('Chiffre clé ajouté et publié sur le site');
+      onMessage('Chiffre clé ajouté avec succès');
+      setAddModal(null);
+    } catch (err) {
+      onMessage(err instanceof Error ? err.message : 'Erreur lors de l’ajout');
+    } finally {
+      setAdding(false);
+    }
   };
 
-  const confirmAddTimeline = () => {
+  const confirmAddTimeline = async () => {
     const year = draftMilestone.year.trim();
     const title = draftMilestone.title.trim();
     const desc = draftMilestone.desc.trim();
@@ -126,11 +150,30 @@ export default function SiteContentPanel({ token, onMessage }: Props) {
       onMessage('Année, titre et description sont requis');
       return;
     }
-    setTimeline((prev) =>
-      sortTimelineLocal([...prev, { year, month: draftMilestone.month, title, desc }])
-    );
-    closeAddModal();
+    setAdding(true);
     onMessage(null);
+    try {
+      const next = sortTimelineLocal([
+        ...timeline,
+        {
+          year,
+          month: draftMilestone.month,
+          endYear: draftMilestone.endYear?.trim() || null,
+          endMonth: draftMilestone.endMonth ?? null,
+          title,
+          desc,
+        },
+      ]);
+      const data = await updateSiteContent(token, { timeline: next });
+      setTimeline(sortTimelineLocal(data.timeline || next));
+      setLocalSuccess('Étape du parcours ajoutée et publiée sur le site');
+      onMessage('Parcours mis à jour avec succès');
+      setAddModal(null);
+    } catch (err) {
+      onMessage(err instanceof Error ? err.message : 'Erreur lors de l’ajout');
+    } finally {
+      setAdding(false);
+    }
   };
 
   const updateStat = (index: number, field: keyof SiteStatistic, value: string) => {
@@ -163,7 +206,8 @@ export default function SiteContentPanel({ token, onMessage }: Props) {
     try {
       const data = await updateSiteContent(token, { statistics });
       setStatistics(data.statistics || []);
-      onMessage('Chiffres clés enregistrés');
+      setLocalSuccess('Chiffres clés enregistrés avec succès');
+      onMessage('Chiffres clés enregistrés avec succès');
     } catch (err) {
       onMessage(err instanceof Error ? err.message : 'Erreur lors de la sauvegarde');
     } finally {
@@ -177,7 +221,8 @@ export default function SiteContentPanel({ token, onMessage }: Props) {
     try {
       const data = await updateSiteContent(token, { timeline: sortTimelineLocal(timeline) });
       setTimeline(sortTimelineLocal(data.timeline || []));
-      onMessage('Parcours enregistré (trié par année puis mois)');
+      setLocalSuccess('Parcours enregistré avec succès');
+      onMessage('Parcours enregistré avec succès');
     } catch (err) {
       onMessage(err instanceof Error ? err.message : 'Erreur lors de la sauvegarde');
     } finally {
@@ -196,6 +241,12 @@ export default function SiteContentPanel({ token, onMessage }: Props) {
           </p>
         </div>
       </div>
+
+      {localSuccess && (
+        <div className="text-sm text-emerald-400 font-body border border-emerald-500/25 bg-emerald-500/10 px-4 py-3">
+          {localSuccess}
+        </div>
+      )}
 
       <div className="flex flex-wrap gap-2 border-b border-white/5 pb-3">
         {(
@@ -304,7 +355,7 @@ export default function SiteContentPanel({ token, onMessage }: Props) {
         <div className="space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <p className="text-xs text-stone-500 font-body">
-              L’ordre d’affichage suit automatiquement l’année puis le mois.
+              L’ordre d’affichage place le plus récent en haut (année puis mois).
             </p>
             <div className="flex items-center gap-2">
               <button type="button" className="btn-ghost text-xs py-2 px-3" onClick={openAddTimeline}>
@@ -340,18 +391,7 @@ export default function SiteContentPanel({ token, onMessage }: Props) {
               <div key={index} className="p-4 sm:p-5 space-y-3">
                 <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-end">
                   <div className="sm:col-span-2">
-                    <label className={labelClass}>Année</label>
-                    <input
-                      type="text"
-                      inputMode="numeric"
-                      value={item.year}
-                      onChange={(e) => updateMilestone(index, 'year', e.target.value)}
-                      placeholder="2024"
-                      className={`${fieldClass} font-display`}
-                    />
-                  </div>
-                  <div className="sm:col-span-3">
-                    <label className={labelClass}>Mois (optionnel)</label>
+                    <label className={labelClass}>Mois début</label>
                     <select
                       value={item.month == null ? '' : String(item.month)}
                       onChange={(e) =>
@@ -364,13 +404,55 @@ export default function SiteContentPanel({ token, onMessage }: Props) {
                       className={fieldClass}
                     >
                       {MONTHS.map((m) => (
-                        <option key={m.value || 'none'} value={m.value}>
+                        <option key={`s-${m.value || 'none'}`} value={m.value}>
                           {m.label}
                         </option>
                       ))}
                     </select>
                   </div>
-                  <div className="sm:col-span-6">
+                  <div className="sm:col-span-2">
+                    <label className={labelClass}>Année début</label>
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      value={item.year}
+                      onChange={(e) => updateMilestone(index, 'year', e.target.value)}
+                      placeholder="2025"
+                      className={`${fieldClass} font-display`}
+                    />
+                  </div>
+                  <div className="sm:col-span-2">
+                    <label className={labelClass}>Mois fin</label>
+                    <select
+                      value={item.endMonth == null ? '' : String(item.endMonth)}
+                      onChange={(e) =>
+                        updateMilestone(
+                          index,
+                          'endMonth',
+                          e.target.value === '' ? null : Number(e.target.value)
+                        )
+                      }
+                      className={fieldClass}
+                    >
+                      {MONTHS.map((m) => (
+                        <option key={`e-${m.value || 'none'}`} value={m.value}>
+                          {m.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="sm:col-span-2">
+                    <label className={labelClass}>Année fin</label>
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      value={item.endYear ?? ''}
+                      onChange={(e) => updateMilestone(index, 'endYear', e.target.value || null)}
+                      placeholder="2025"
+                      className={`${fieldClass} font-display`}
+                    />
+                  </div>
+                  <div className="sm:col-span-3">
                     <label className={labelClass}>Titre</label>
                     <input
                       type="text"
@@ -464,40 +546,92 @@ export default function SiteContentPanel({ token, onMessage }: Props) {
                 </>
               ) : (
                 <>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className={labelClass}>Année</label>
-                      <input
-                        type="text"
-                        inputMode="numeric"
-                        autoFocus
-                        value={draftMilestone.year}
-                        onChange={(e) =>
-                          setDraftMilestone((d) => ({ ...d, year: e.target.value }))
-                        }
-                        placeholder="2024"
-                        className={`${fieldClass} font-display`}
-                      />
+                  <div>
+                    <p className="text-[10px] uppercase tracking-wider text-stone-500 font-body mb-2">
+                      Période de début
+                    </p>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className={labelClass}>Mois</label>
+                        <select
+                          value={draftMilestone.month == null ? '' : String(draftMilestone.month)}
+                          onChange={(e) =>
+                            setDraftMilestone((d) => ({
+                              ...d,
+                              month: e.target.value === '' ? null : Number(e.target.value),
+                            }))
+                          }
+                          className={fieldClass}
+                        >
+                          {MONTHS.map((m) => (
+                            <option key={`ds-${m.value || 'none'}`} value={m.value}>
+                              {m.label}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label className={labelClass}>Année</label>
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          autoFocus
+                          value={draftMilestone.year}
+                          onChange={(e) =>
+                            setDraftMilestone((d) => ({ ...d, year: e.target.value }))
+                          }
+                          placeholder="2025"
+                          className={`${fieldClass} font-display`}
+                        />
+                      </div>
                     </div>
-                    <div>
-                      <label className={labelClass}>Mois (optionnel)</label>
-                      <select
-                        value={draftMilestone.month == null ? '' : String(draftMilestone.month)}
-                        onChange={(e) =>
-                          setDraftMilestone((d) => ({
-                            ...d,
-                            month: e.target.value === '' ? null : Number(e.target.value),
-                          }))
-                        }
-                        className={fieldClass}
-                      >
-                        {MONTHS.map((m) => (
-                          <option key={m.value || 'none'} value={m.value}>
-                            {m.label}
-                          </option>
-                        ))}
-                      </select>
+                  </div>
+                  <div>
+                    <p className="text-[10px] uppercase tracking-wider text-stone-500 font-body mb-2">
+                      Période de fin (optionnel)
+                    </p>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className={labelClass}>Mois</label>
+                        <select
+                          value={
+                            draftMilestone.endMonth == null ? '' : String(draftMilestone.endMonth)
+                          }
+                          onChange={(e) =>
+                            setDraftMilestone((d) => ({
+                              ...d,
+                              endMonth: e.target.value === '' ? null : Number(e.target.value),
+                            }))
+                          }
+                          className={fieldClass}
+                        >
+                          {MONTHS.map((m) => (
+                            <option key={`de-${m.value || 'none'}`} value={m.value}>
+                              {m.label}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label className={labelClass}>Année</label>
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          value={draftMilestone.endYear ?? ''}
+                          onChange={(e) =>
+                            setDraftMilestone((d) => ({
+                              ...d,
+                              endYear: e.target.value || null,
+                            }))
+                          }
+                          placeholder="2025"
+                          className={`${fieldClass} font-display`}
+                        />
+                      </div>
                     </div>
+                    <p className="mt-2 text-[11px] text-stone-600 font-body">
+                      Exemple d’affichage : Janvier 2025 - Avril 2025
+                    </p>
                   </div>
                   <div>
                     <label className={labelClass}>Titre</label>
@@ -528,16 +662,22 @@ export default function SiteContentPanel({ token, onMessage }: Props) {
             </div>
 
             <div className="flex justify-end gap-2 px-5 py-4 border-t border-white/5">
-              <button type="button" className="btn-ghost text-xs py-2 px-3" onClick={closeAddModal}>
+              <button
+                type="button"
+                className="btn-ghost text-xs py-2 px-3"
+                onClick={closeAddModal}
+                disabled={adding}
+              >
                 Annuler
               </button>
               <button
                 type="button"
                 className="btn-primary text-xs py-2 px-4"
                 onClick={addModal === 'statistics' ? confirmAddStatistics : confirmAddTimeline}
+                disabled={adding}
               >
                 <Plus className="w-3.5 h-3.5 inline mr-1.5" />
-                Ajouter
+                {adding ? 'Publication…' : 'Ajouter & publier'}
               </button>
             </div>
           </div>

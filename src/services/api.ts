@@ -145,6 +145,8 @@ export type SiteStatistic = {
 export type TimelineMilestone = {
   year: string;
   month: number | null;
+  endYear?: string | null;
+  endMonth?: number | null;
   title: string;
   desc: string;
 };
