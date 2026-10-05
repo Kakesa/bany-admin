@@ -151,11 +151,18 @@ export type TimelineMilestone = {
   desc: string;
 };
 
+export type EngagementSettings = {
+  showLikes: boolean;
+  showComments: boolean;
+  showShare: boolean;
+};
+
 export type SiteContent = {
   id: string;
   key: string;
   statistics: SiteStatistic[];
   timeline?: TimelineMilestone[];
+  engagement?: EngagementSettings;
   updatedAt?: string;
 };
 
@@ -165,7 +172,11 @@ export async function fetchSiteContent(): Promise<SiteContent> {
 
 export async function updateSiteContent(
   token: string,
-  payload: { statistics?: SiteStatistic[]; timeline?: TimelineMilestone[] }
+  payload: {
+    statistics?: SiteStatistic[];
+    timeline?: TimelineMilestone[];
+    engagement?: EngagementSettings;
+  }
 ): Promise<SiteContent> {
   return request('/api/site-content', {
     method: 'PUT',

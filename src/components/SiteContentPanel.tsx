@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { Plus, Save, Trash2, BarChart3, ArrowUp, ArrowDown, Route, X } from 'lucide-react';
+import { Plus, Save, Trash2, BarChart3, ArrowUp, ArrowDown, Route, X, Heart } from 'lucide-react';
 import {
   fetchSiteContent,
   updateSiteContent,
+  type EngagementSettings,
   type SiteStatistic,
   type TimelineMilestone,
 } from '../services/api';
@@ -12,7 +13,13 @@ type Props = {
   onMessage: (msg: string | null) => void;
 };
 
-type SubTab = 'statistics' | 'timeline';
+type SubTab = 'statistics' | 'timeline' | 'engagement';
+
+const DEFAULT_ENGAGEMENT: EngagementSettings = {
+  showLikes: true,
+  showComments: true,
+  showShare: true,
+};
 type AddModal = 'statistics' | 'timeline' | null;
 
 const MONTHS = [
@@ -58,6 +65,7 @@ export default function SiteContentPanel({ token, onMessage }: Props) {
   const [subTab, setSubTab] = useState<SubTab>('statistics');
   const [statistics, setStatistics] = useState<SiteStatistic[]>([]);
   const [timeline, setTimeline] = useState<TimelineMilestone[]>([]);
+  const [engagement, setEngagement] = useState<EngagementSettings>(DEFAULT_ENGAGEMENT);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [addModal, setAddModal] = useState<AddModal>(null);
@@ -75,6 +83,7 @@ export default function SiteContentPanel({ token, onMessage }: Props) {
         if (!cancelled) {
           setStatistics(data.statistics || []);
           setTimeline(sortTimelineLocal(data.timeline || []));
+          setEngagement({ ...DEFAULT_ENGAGEMENT, ...(data.engagement || {}) });
         }
       } catch (err) {
         if (!cancelled) {
@@ -215,6 +224,21 @@ export default function SiteContentPanel({ token, onMessage }: Props) {
     }
   };
 
+  const handleSaveEngagement = async () => {
+    setSaving(true);
+    onMessage(null);
+    try {
+      const data = await updateSiteContent(token, { engagement });
+      setEngagement({ ...DEFAULT_ENGAGEMENT, ...(data.engagement || engagement) });
+      setLocalSuccess('Interactions enregistrées avec succès');
+      onMessage('Interactions enregistrées avec succès');
+    } catch (err) {
+      onMessage(err instanceof Error ? err.message : 'Erreur lors de la sauvegarde');
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const handleSaveTimeline = async () => {
     setSaving(true);
     onMessage(null);
@@ -253,6 +277,7 @@ export default function SiteContentPanel({ token, onMessage }: Props) {
           [
             { id: 'statistics' as const, label: 'Chiffres clés', icon: BarChart3 },
             { id: 'timeline' as const, label: 'Parcours', icon: Route },
+            { id: 'engagement' as const, label: 'Interactions', icon: Heart },
           ] as const
         ).map(({ id, label, icon: Icon }) => (
           <button
@@ -273,6 +298,72 @@ export default function SiteContentPanel({ token, onMessage }: Props) {
 
       {loading ? (
         <p className="text-sm text-stone-500 font-body">Chargement…</p>
+      ) : subTab === 'engagement' ? (
+        <div className="space-y-4">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="text-xs text-stone-500 font-body max-w-xl">
+              Affichez ou masquez le j’aime, les commentaires et le partage sur les articles et les épisodes.
+            </p>
+            <button
+              type="button"
+              className="btn-primary text-xs py-2 px-4"
+              onClick={handleSaveEngagement}
+              disabled={saving}
+            >
+              <Save className="w-3.5 h-3.5 inline mr-1.5" />
+              {saving ? 'Enregistrement…' : 'Enregistrer'}
+            </button>
+          </div>
+          <div className="border border-white/8 divide-y divide-white/5">
+            {(
+              [
+                {
+                  key: 'showLikes' as const,
+                  label: 'J’aime',
+                  hint: 'Bouton et compteur de j’aime sur les articles et les épisodes.',
+                },
+                {
+                  key: 'showComments' as const,
+                  label: 'Commentaires',
+                  hint: 'Bouton, compteur et fil de commentaires sur les articles.',
+                },
+                {
+                  key: 'showShare' as const,
+                  label: 'Partage',
+                  hint: 'Bouton de partage sur les articles et les épisodes.',
+                },
+              ] as const
+            ).map((item) => {
+              const enabled = engagement[item.key];
+              return (
+                <div key={item.key} className="p-4 sm:p-5 flex items-center justify-between gap-4">
+                  <div>
+                    <p className="text-sm text-stone-100 font-body">{item.label}</p>
+                    <p className="mt-1 text-xs text-stone-500 font-body">{item.hint}</p>
+                  </div>
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={enabled}
+                    onClick={() =>
+                      setEngagement((prev) => ({ ...prev, [item.key]: !prev[item.key] }))
+                    }
+                    className={`shrink-0 inline-flex items-center gap-2 px-3 py-2 text-xs font-body border transition cursor-pointer ${
+                      enabled
+                        ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-300'
+                        : 'border-white/10 bg-stone-900 text-stone-400'
+                    }`}
+                  >
+                    <span
+                      className={`h-2 w-2 rounded-full ${enabled ? 'bg-emerald-400' : 'bg-stone-600'}`}
+                    />
+                    {enabled ? 'Affiché' : 'Masqué'}
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        </div>
       ) : subTab === 'statistics' ? (
         <div className="space-y-4">
           <div className="flex flex-wrap items-center justify-end gap-2">
@@ -351,7 +442,7 @@ export default function SiteContentPanel({ token, onMessage }: Props) {
             ))}
           </div>
         </div>
-      ) : (
+      ) : subTab === 'timeline' ? (
         <div className="space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <p className="text-xs text-stone-500 font-body">
@@ -487,7 +578,7 @@ export default function SiteContentPanel({ token, onMessage }: Props) {
             ))}
           </div>
         </div>
-      )}
+      ) : null}
 
       {addModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
