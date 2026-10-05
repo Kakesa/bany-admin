@@ -458,7 +458,7 @@ export default function SiteContentPanel({ token, onMessage }: Props) {
                       type="text"
                       value={item.title}
                       onChange={(e) => updateMilestone(index, 'title', e.target.value)}
-                      placeholder="Studio Bany Talks"
+                      placeholder="Studio Bany Talks Experience"
                       className={fieldClass}
                     />
                   </div>
@@ -641,7 +641,7 @@ export default function SiteContentPanel({ token, onMessage }: Props) {
                       onChange={(e) =>
                         setDraftMilestone((d) => ({ ...d, title: e.target.value }))
                       }
-                      placeholder="Studio Bany Talks"
+                      placeholder="Studio Bany Talks Experience"
                       className={fieldClass}
                     />
                   </div>

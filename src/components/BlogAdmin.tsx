@@ -103,7 +103,7 @@ const emptyForm = (categories: BlogCategory[]): FormState => ({
   gallery: [],
   youtubeUrl: '',
   author: 'Bany',
-  authorTitle: 'Founder & CEO – Yolo Group | Honorary Doctor (Entrepreneurship & Host of Bany Talks)',
+  authorTitle: 'Founder & CEO – Yolo Group | Honorary Doctor (Entrepreneurship & Host of Bany Talks Experience)',
   categoryId: categories[0]?.id || '',
   tags: '',
   status: 'draft',
@@ -123,7 +123,7 @@ function articleToForm(article: BlogArticle): FormState {
     author: article.author,
     authorTitle:
       article.authorTitle ||
-      'Founder & CEO – Yolo Group | Honorary Doctor (Entrepreneurship & Host of Bany Talks)',
+      'Founder & CEO – Yolo Group | Honorary Doctor (Entrepreneurship & Host of Bany Talks Experience)',
     categoryId: article.categoryId,
     tags: (article.tags || []).join(', '),
     status: article.status,
